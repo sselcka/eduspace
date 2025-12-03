@@ -1,25 +1,191 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import { supabase } from "./supabaseClient";
+import AdminPanel from "./AdminPanel";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // --- Kullanıcı girişini izleme ---
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => authListener.subscription.unsubscribe();
+  }, []);
+
+  // --- Giriş fonksiyonu ---
+  async function handleLogin(e) {
+    e.preventDefault();
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert("Giriş başarısız: " + error.message);
+      return;
+    }
+
+    // 👇 Giriş yapan kullanıcıyı al
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // 👇 Kullanıcının okul_id'sini çek
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('okul_id')
+      .eq('id', user.id)
+      .single();
+
+     if (userError || !userData) {
+    alert("Kullanıcının okul bilgisi alınamadı");
+    return;
+    }
+
+    // 👇 Oturuma okul_id tanımla (dinamik)
+    await supabase.rpc('set_okul_id', { id: userData.okul_id });
+    console.log("okul_id set edildi:", userData.okul_id);
+
+    setEmail("");
+    setPassword("");
+  }
+
+  // --- Çıkış fonksiyonu ---
+  async function handleLogout() {
+    await supabase.auth.signOut();
+  }
+
+  // --- Yükleniyor ekranı ---
+  if (loading) {
+    return (
+      <div style={{ color: "white", padding: 40 }}>
+        Yükleniyor...
+      </div>
+    );
+  }
+
+  // --- Kullanıcı GİRİŞ yapmamışsa Login ekranı göster ---
+  if (!session) {
+    return (
+      <div
+        style={{
+          background: "#0f172a",
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          fontFamily: "sans-serif",
+        }}
+      >
+        <div
+          style={{
+            width: 350,
+            padding: 30,
+            background: "#1e293b",
+            borderRadius: 12,
+            boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+          }}
         >
-          Learn React
-        </a>
-      </header>
+          <h2 style={{ textAlign: "center", marginBottom: 20 }}>
+            EDUSPACE – Yönetici Girişi
+          </h2>
+
+          <form onSubmit={handleLogin} style={{ display: "grid", gap: 12 }}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              required
+              onChange={(e) => setEmail(e.target.value)}
+              style={{
+                padding: 10,
+                borderRadius: 6,
+                border: "1px solid #334155",
+                background: "#0f172a",
+                color: "white",
+              }}
+            />
+
+            <input
+              type="password"
+              placeholder="Şifre"
+              value={password}
+              required
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                padding: 10,
+                borderRadius: 6,
+                border: "1px solid #334155",
+                background: "#0f172a",
+                color: "white",
+              }}
+            />
+
+            <button
+              type="submit"
+              style={{
+                padding: 12,
+                borderRadius: 6,
+                background: "#38bdf8",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              Giriş Yap
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Kullanıcı GİRİŞ YAPMIŞSA AdminPanel'i göster ---
+  return (
+    <div style={{ background: "#0f172a", minHeight: "100vh" }}>
+      {/* HEADER */}
+      <div
+        style={{
+          padding: 16,
+          background: "#1e293b",
+          color: "white",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontSize: 20,
+        }}
+      >
+        <b>EDUSPACE – Sınav Planlama</b>
+
+        <button
+          onClick={handleLogout}
+          style={{
+            padding: "8px 14px",
+            background: "#ef4444",
+            color: "white",
+            border: "none",
+            borderRadius: 6,
+            cursor: "pointer",
+          }}
+        >
+          Çıkış Yap
+        </button>
+      </div>
+
+      {/* Ana Panel */}
+      <AdminPanel />
     </div>
   );
 }
-
-export default App;

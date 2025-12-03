@@ -1,25 +1,6 @@
-import logo from './logo.svg';
-import './App.css';
+import { createClient } from "@supabase/supabase-js";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+const SUPABASE_URL = "https://rstofsvcpadtduhavgcd.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzdG9mc3ZjcGFkdGR1aGF2Z2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNjAwNDUsImV4cCI6MjA3OTkzNjA0NX0.5l-RnizecKLRVFdYDhh-az52LgVVt_Us8VhM_OQyIB8";
 
-export default App;
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
