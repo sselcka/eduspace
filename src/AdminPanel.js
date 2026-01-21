@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import RegisterForm from "./RegisterForm";
 import { supabase } from './supabaseClient'
 
 
-export default function AdminPanel() {
+export default function AdminPanel({ session, role }) {
   const [activeTab, setActiveTab] = useState('admin')
 
   // Tables
@@ -84,10 +83,14 @@ export default function AdminPanel() {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(sub1)
+      try {
+        sub1?.unsubscribe?.()
+      } catch (e) {
+        try { supabase.removeChannel(sub1) } catch (err) { console.warn('removeChannel error', err) }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [session])
 
   // ------------------------- CRUD: Hocalar -------------------------
   async function addHoca(e) {
@@ -208,6 +211,8 @@ export default function AdminPanel() {
 
   // ------------------------- OTOMATİK ATAMA (Basit mantık) -------------------------
   async function otomatikAtama() {
+    // ensure local lists are fresh (helpers etc.)
+    await fetchAll()
     // fetch fresh
     const { data: talepData, error: talepErr } = await supabase.from('sinav_talepleri').select('*').eq('durum', 'BEKLIYOR').order('id')
     const { data: derslikData, error: derslikErr } = await supabase.from('derslikler').select('*').order('kapasite', { ascending: true })
@@ -372,51 +377,51 @@ return (
   <div style={{ padding: 20, maxWidth: 1200, margin: '0 auto', color: '#e5e7eb', fontFamily: 'system-ui' }}>
     <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
 
-      <button
-        onClick={() => setActiveTab('admin')}
-        style={{
-          padding: 8,
-          background: activeTab === 'admin' ? '#38bdf8' : '#020617',
-          color: activeTab === 'admin' ? 'black' : 'white',   // ✔ yazı rengi eklendi
-          borderRadius: 6
-        }}
-      >
-        Yönetici
-      </button>
+  {role === 'admin' && (
+    <button
+      onClick={() => setActiveTab('admin')}
+      style={{
+        padding: 8,
+        background: activeTab === 'admin' ? '#38bdf8' : '#020617',
+        color: activeTab === 'admin' ? 'black' : 'white',
+        borderRadius: 6
+      }}
+    >
+      Yönetici
+    </button>
+  )}
 
-      <button
-        onClick={() => setActiveTab('teacher')}
-        style={{
-          padding: 8,
-          background: activeTab === 'teacher' ? '#38bdf8' : '#020617',
-          color: activeTab === 'teacher' ? 'black' : 'white', // ✔ yazı rengi eklendi
-          borderRadius: 6
-        }}
-      >
-        Öğretmen
-      </button>
+  <button
+    onClick={() => setActiveTab('teacher')}
+    style={{
+      padding: 8,
+      background: activeTab === 'teacher' ? '#38bdf8' : '#020617',
+      color: activeTab === 'teacher' ? 'black' : 'white',
+      borderRadius: 6
+    }}
+  >
+    Öğretmen
+  </button>
 
-      <button
-        onClick={() => setActiveTab('results')}
-        style={{
-          padding: 8,
-          background: activeTab === 'results' ? '#38bdf8' : '#020617',
-          color: activeTab === 'results' ? 'black' : 'white', // ✔ yazı rengi eklendi
-          borderRadius: 6
-        }}
-      >
-        Atama Sonuçları
-      </button>
+  {role === 'admin' && (
+    <button
+      onClick={() => setActiveTab('results')}
+      style={{
+        padding: 8,
+        background: activeTab === 'results' ? '#38bdf8' : '#020617',
+        color: activeTab === 'results' ? 'black' : 'white',
+        borderRadius: 6
+      }}
+    >
+      Atama Sonuçları
+    </button>
+  )}
 
-    </div>
+</div>
 
-      {activeTab === 'admin' && (
+      {activeTab === 'admin' && role === 'admin' && (
         <section>
            <h2>Yönetici Paneli</h2>
-
-          {/* Yeni Kullanıcı Kaydı (sadece admin sekmesinde görünür) */}
-          <div style={{ marginTop: 8, padding: 12, border: '1px solid #1f2937', borderRadius: 8 }}></div>
-            <RegisterForm />    
 
           {/* Hoca Ekle */}
           <div style={{ marginTop: 8, padding: 12, border: '1px solid #1f2937', borderRadius: 8 }}>
@@ -602,7 +607,7 @@ return (
         </section>
       )}
 
-      {activeTab === 'results' && (
+      {activeTab === 'results' && role === 'admin' && (
         <section>
           <h2>Atama Sonuçları</h2>
           <p>Otomatik atama sonrası atama_sonuclari tablosu görüntülenir.</p>
